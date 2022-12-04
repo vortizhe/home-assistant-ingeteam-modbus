@@ -1,7 +1,6 @@
 """The Ingeteam Modbus Integration."""
 import asyncio
 import logging
-import operator
 import threading
 from datetime import timedelta
 from typing import Optional
@@ -104,19 +103,6 @@ async def async_unload_entry(hass, entry):
 
     hass.data[DOMAIN].pop(entry.data["name"])
     return True
-
-def validate(value, comparison, against):
-    ops = {
-        '>': operator.gt,
-        '<': operator.lt,
-        '>=': operator.ge,
-        '<=': operator.le,
-        '==': operator.eq,
-        '!=': operator.ne
-    }
-    if not ops[comparison](value, against):
-        raise ValueError(f"Value {value} failed validation ({comparison}{against})")
-    return value
 
 class IngeteamModbusHub:
     """Thread safe wrapper class for pymodbus."""
