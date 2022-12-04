@@ -10,17 +10,23 @@ from .const import (
     DOMAIN,
     ATTR_MANUFACTURER,
 )
-from homeassistant.const import CONF_NAME, DEVICE_CLASS_ENERGY, ENERGY_KILO_WATT_HOUR, CONF_SCAN_INTERVAL
+from homeassistant.const import (
+    CONF_NAME, 
+    TEMP_CELSIUS,
+    PERCENTAGE
+)
+
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
     STATE_CLASS_MEASUREMENT,
     SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+    SensorDeviceClass
 )
 from homeassistant.components.integration.sensor import IntegrationSensor,ATTR_SOURCE_ID,UNIT_PREFIXES,UNIT_TIME
 
 
 from homeassistant.core import callback
-from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -133,6 +139,55 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(entities)
     return True
 
+_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
+    "A": SensorEntityDescription(
+        key="A",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    "V": SensorEntityDescription(
+        key="V",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    "W": SensorEntityDescription(
+        key="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    "Var": SensorEntityDescription(
+        key="Var",
+        device_class=SensorDeviceClass.REACTIVE_POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    "B": SensorEntityDescription(
+        key="B",
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+    "C": SensorEntityDescription(
+        key="C",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=TEMP_CELSIUS,
+    ),
+    "Hz": SensorEntityDescription(
+        key="Hz",
+        device_class=SensorDeviceClass.FREQUENCY,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    "%": SensorEntityDescription(
+        key="%",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+}
+
+DIAG_SENSOR = SensorEntityDescription(
+    key="_",
+    state_class=SensorStateClass.MEASUREMENT,
+)
 
 class CalculatedEnergySensor(IntegrationSensor):
     def __init__(
@@ -164,6 +219,10 @@ class CalculatedEnergySensor(IntegrationSensor):
     @property
     def hub(self):
         return self._hub
+    
+    @property
+    def device_class(self):
+        return SensorDeviceClass.ENERGY
 
 
 class IngeteamSensor(SensorEntity):
@@ -175,10 +234,11 @@ class IngeteamSensor(SensorEntity):
         self._hub = hub
         self._key = key
         self._name = name
-        self._unit_of_measurement = unit
+        self._unit_of_measurement = unit if unit != "B" else "%"
         self._icon = icon
         self._device_info = device_info
         self._attr_state_class = STATE_CLASS_MEASUREMENT
+        self.entity_description = _DESCRIPTIONS.get(unit, DIAG_SENSOR)
 
     async def async_added_to_hass(self):
         """Register callbacks."""
