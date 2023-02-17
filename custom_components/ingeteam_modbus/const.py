@@ -69,6 +69,8 @@ PV_FIELD_SENSOR_TYPES = {
     "PV2_Current": ["PV2 Current", "pv2_current", "A", "mdi:current-dc"],
     "PV2_Power": ["PV2 Power", "pv2_power", "W", None],
     "PV2_Energy": ["PV2 Energy", "pv2_energy", "Wh", None, "pv2_power"],
+    "PV_Total_Power": ["PV Total Power", "pv_total_power", "W", None],
+    "PV_Total_Energy": ["PV Total Energy", "pv_total_energy", "Wh", None, "pv_total_power"],
 }
 
 BATTERY_SENSOR_TYPES = {

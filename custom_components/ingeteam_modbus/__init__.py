@@ -357,6 +357,8 @@ class IngeteamModbusHub:
         self.data["pv2_current"] = pv2_current / 100
         self.data["pv2_power"] = pv2_power
 
+        self.data["pv_total_power"] = pv1_power + pv2_power
+
         return True
 
     def read_modbus_data_battery(self):
