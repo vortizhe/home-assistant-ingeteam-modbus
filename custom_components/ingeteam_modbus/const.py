@@ -58,6 +58,8 @@ METER_SENSOR_TYPES = {
     "EM_Frequency": ["External Meter AC Frequency", "em_freq", "Hz", None],
     "EM_Active_Power": ["External Meter AC Active Power", "em_active_power", "W", None],
     "EM_Active_Energy": ["External Meter AC Active Energy", "em_active_energy", "Wh", None, "external_meter_ac_active_power"],
+    "EM_Active_Power_Returned": ["External Meter AC Active Power Returned", "em_active_power_returned", "W", None],
+    "EM_Active_Energy_Returned": ["External Meter AC Active Energy Returned", "em_active_energy_returned", "Wh", None, "external_meter_ac_active_power_returned"],
     "EM_Reactive_Power": ["External Meter AC Reactive Power", "em_reactive_power", "Var", None],
 }
 
@@ -77,8 +79,10 @@ PV_FIELD_SENSOR_TYPES = {
 BATTERY_SENSOR_TYPES = {
     "Battery_Voltage": ["Battery Voltage", "battery_voltage", "V", None],
     "Battery_Current": ["Battery Current", "battery_current", "A",  "mdi:current-dc"],
-    "Battery_Power": ["Battery Power", "battery_power", "W", "mdi:battery-charging-100"],
-    "Battery_Energy": ["Battery Energy", "battery_energy", "Wh", "mdi:battery-charging-100", "battery_power"],
+    "Battery_Charging_Power": ["Battery Charging Power", "battery_charging_power", "W", "mdi:battery-charging-100"],
+    "Battery_Charging_Energy": ["Battery Charging Energy", "battery_charging_energy", "Wh", "mdi:battery-charging-100", "battery_charging_power"],
+    "Battery_Discharging_Power": ["Battery Discharging Power", "battery_discharging_power", "W", "mdi:battery-charging-100"],
+    "Battery_Discharging_Energy": ["Battery Discharging Energy", "battery_discharging_energy", "Wh", "mdi:battery-charging-100", "battery_discharging_power"],
     "Battery_SOC": ["Battery State of Charge", "battery_state_of_charge", "B", "mdi:battery-high"],
     "Battery_SOH": ["Battery State of Health", "battery_state_of_health", "%", None],
     "Battery_Charging_Voltage": ["Battery Charging Voltage", "battery_charging_voltage", "V", None],

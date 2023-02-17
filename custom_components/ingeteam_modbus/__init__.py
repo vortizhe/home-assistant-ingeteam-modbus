@@ -323,12 +323,14 @@ class IngeteamModbusHub:
         
         em_voltage = decoder.decode_16bit_uint()
         em_freq = decoder.decode_16bit_uint()
-        em_active_power = decoder.decode_16bit_int()
+        em_active_power_data = decoder.decode_16bit_int()
+        em_active_power = round(em_active_power_data, abs(em_active_power_data))
         em_reactive_power = decoder.decode_16bit_int()
 
         self.data["em_voltage"] = round(em_voltage, abs(em_voltage))
         self.data["em_freq"] = round(em_freq / 10)
-        self.data["em_active_power"] = round(em_active_power, abs(em_active_power))
+        self.data["em_active_power"] = em_active_power if em_active_power >= 0 else 0
+        self.data["em_active_power_returned"] = em_active_power * -1 if em_active_power < 0 else 0
         self.data["em_reactive_power"] = round(em_reactive_power, abs(em_reactive_power))
 
         return True
@@ -388,7 +390,8 @@ class IngeteamModbusHub:
 
         self.data["battery_voltage"] = battery_voltage / 10
         self.data["battery_current"] = battery_current / 100
-        self.data["battery_power"] = battery_power
+        self.data["battery_discharging_power"] = battery_power * -1 if battery_power < 0 else 0
+        self.data["battery_charging_power"] = battery_power if battery_power > 0 else 0
         self.data["battery_state_of_charge"] = battery_state_of_charge
         self.data["battery_state_of_health"] = battery_state_of_health
         self.data["battery_charging_voltage"] = battery_charging_voltage / 10
