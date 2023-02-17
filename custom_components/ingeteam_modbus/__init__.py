@@ -390,8 +390,8 @@ class IngeteamModbusHub:
 
         self.data["battery_voltage"] = battery_voltage / 10
         self.data["battery_current"] = battery_current / 100
-        self.data["battery_discharging_power"] = battery_power * -1 if battery_power < 0 else 0
-        self.data["battery_charging_power"] = battery_power if battery_power > 0 else 0
+        self.data["battery_discharging_power"] = battery_power if battery_power > 0 else 0
+        self.data["battery_charging_power"] = battery_power * -1 if battery_power < 0 else 0
         self.data["battery_state_of_charge"] = battery_state_of_charge
         self.data["battery_state_of_health"] = battery_state_of_health
         self.data["battery_charging_voltage"] = battery_charging_voltage / 10
