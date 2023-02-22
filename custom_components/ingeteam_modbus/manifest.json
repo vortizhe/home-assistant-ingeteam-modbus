@@ -2,8 +2,9 @@
   "domain": "ingeteam_modbus",
   "name": "Ingeteam Modbus",
   "documentation": "https://github.com/vortizhe/home-assistant-ingeteam-modbus",
-  "requirements": ["pymodbus==1.5.2"],
+  "requirements": ["pymodbus==2.5.3"],
   "codeowners": ["@vortizhe"],
   "config_flow": true,
   "version": "0.1.3"
 }
+
