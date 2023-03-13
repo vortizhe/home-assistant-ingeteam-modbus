@@ -296,7 +296,7 @@ class IngeteamModbusHub:
         self.data["im_power_factor"] = im_power_factor / 1000
         self.data["dc_bus_voltage"] = dc_bus_voltage
         self.data["internal_temp"] = internal_temp / 10
-        self.data["rms_diff_current"] = rms_diff_current
+        self.data["rms_diff_current"] = rms_diff_current / 10
         self.data["do_1_status"] = BOOLEAN_STATUS[do_1_status]
         self.data["do_2_status"] = BOOLEAN_STATUS[do_2_status]
         self.data["di_drm_status"] = BOOLEAN_STATUS[di_drm_status]
