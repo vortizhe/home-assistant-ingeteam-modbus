@@ -17,5 +17,13 @@ Modbus is actived by default, just in case:
 2. Go to top menu `Comms` then click `Firewall` on left sidebar menu.
 3. Check if Modbus TCP option is enabled on any interface and/or network.
 
+![inverter](https://user-images.githubusercontent.com/777846/224826986-20ac83e1-bbfe-4163-a1d7-60d6f0778f04.png)
+![battery](https://user-images.githubusercontent.com/777846/224826994-f1ba6d64-bee5-42a5-ac97-d91afe945a53.png)
+
+![Screenshot 2023-03-13 at 20 57 35](https://user-images.githubusercontent.com/777846/224827579-798e2254-fdb1-43ef-a5d6-37195bf2ce8a.png)
+
+Graphs made with awesome Mini Graph Card from Karl Kihlström https://github.com/kalkih/mini-graph-card
+
+
 [1]: http://www.ingeras.es/manual/ABH2010IMB08.pdf
 [2]: http://www.ingeras.es/manual/ABH2010IMC14.pdf
