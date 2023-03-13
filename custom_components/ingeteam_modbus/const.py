@@ -72,6 +72,10 @@ PV_FIELD_SENSOR_TYPES = {
     "PV2_Current": ["PV2 Current", "pv2_current", "A", "mdi:current-dc"],
     "PV2_Power": ["PV2 Power", "pv2_power", "W", None],
     "PV2_Energy": ["PV2 Energy", "pv2_energy", "Wh", None, "pv2_power"],
+    "PV_External_Power": ["PV External Power", "external_pv_power", "W", None],
+    "PV_Eternal_Energy": ["PV External Energy", "external_pv_energy", "Wh", None, "pv_external_power"],
+    "PV_Internal_Total_Power": ["PV Internal Total Power", "pv_internal_total_power", "W", None],
+    "PV_Internal_Total_Energy": ["PV Internal Total Energy", "pv_internal_total_energy", "Wh", None, "pv_internal_total_power"],
     "PV_Total_Power": ["PV Total Power", "pv_total_power", "W", None],
     "PV_Total_Energy": ["PV Total Energy", "pv_total_energy", "Wh", None, "pv_total_power"],
 }

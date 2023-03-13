@@ -210,7 +210,7 @@ class IngeteamModbusHub:
         return (
             self.read_modbus_data_status(status_data.registers[9:17])
             and self.read_modbus_data_battery(status_data.registers[17:31])
-            and self.read_modbus_data_pv_field(status_data.registers[31:37])
+            and self.read_modbus_data_pv_field(status_data.registers[31:37], status_data.registers[79:80])
             and self.read_modbus_data_inverter(status_data.registers[37:67])
             and self.read_modbus_data_meter(status_data.registers[69:73])
         )
@@ -326,8 +326,9 @@ class IngeteamModbusHub:
 
         return True
 
-    def read_modbus_data_pv_field(self, registers):
+    def read_modbus_data_pv_field(self, registers, external_pv_data):
         decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.Big)
+        external_pv_decoder = BinaryPayloadDecoder.fromRegisters(external_pv_data, byteorder=Endian.Big)
 
         pv1_voltage = decoder.decode_16bit_uint()
         pv1_current = decoder.decode_16bit_uint()
@@ -335,6 +336,7 @@ class IngeteamModbusHub:
         pv2_voltage = decoder.decode_16bit_uint()
         pv2_current = decoder.decode_16bit_uint()
         pv2_power = decoder.decode_16bit_uint()
+        external_pv_power = external_pv_decoder.decode_16bit_uint()
 
         self.data["pv1_voltage"] = pv1_voltage
         self.data["pv1_current"] = pv1_current / 100
@@ -342,8 +344,10 @@ class IngeteamModbusHub:
         self.data["pv2_voltage"] = pv2_voltage
         self.data["pv2_current"] = pv2_current / 100
         self.data["pv2_power"] = pv2_power
+        self.data["external_pv_power"] = external_pv_power
 
-        self.data["pv_total_power"] = pv1_power + pv2_power
+        self.data["pv_internal_total_power"] = pv1_power + pv2_power
+        self.data["pv_total_power"] = pv1_power + pv2_power + external_pv_power
 
         return True
 
