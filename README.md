@@ -1,5 +1,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/vortizhe)
+
 # home-assistant-ingeteam-modbus
 Home assistant Custom Component for reading data from Ingeteam inverter through modbus TCP.
 Implements Inverter registers from Ingeteam docs [Input registers][1] and [Alarm interpretation and Troubleshooting guide][2]

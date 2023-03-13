@@ -1,3 +1,6 @@
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/vortizhe)
 ## INGETEAM solar inverter for Home Assistant 
 
 Home assistant Custom Component for reading data from Ingeteam inverter through modbus TCP. Implements Inverter registers from https://www.ingeconsuntraining.info/?page_id=25439.
@@ -18,3 +21,4 @@ This custom component is experimental version with featured not (yet) present in
 
 ### Configuration
 Go to the integrations page in your configuration and click on new integration -> Ingeteam Modbus
+
