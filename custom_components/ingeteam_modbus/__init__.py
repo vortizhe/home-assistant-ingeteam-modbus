@@ -263,8 +263,9 @@ class IngeteamModbusHub:
         im_reactive_power = decoder.decode_16bit_int()
         im_power_factor = decoder.decode_16bit_int()
         dc_bus_voltage = decoder.decode_16bit_uint()
-        decoder.skip_bytes(4)
-        internal_temp = decoder.decode_16bit_int()
+        temp_mod_1 = decoder.decode_16bit_int()
+        temp_mod_2 = decoder.decode_16bit_int()
+        temp_pcb = decoder.decode_16bit_int()
         decoder.skip_bytes(6)
         rms_diff_current = decoder.decode_16bit_uint()
         do_1_status = decoder.decode_16bit_uint()
@@ -295,7 +296,9 @@ class IngeteamModbusHub:
         self.data["im_reactive_power"] = im_reactive_power
         self.data["im_power_factor"] = im_power_factor / 1000
         self.data["dc_bus_voltage"] = dc_bus_voltage
-        self.data["internal_temp"] = internal_temp / 10
+        self.data["temp_mod_1"] = temp_mod_1 / 10
+        self.data["temp_mod_2"] = temp_mod_2 / 10
+        self.data["temp_pcb"] = temp_pcb / 10
         self.data["rms_diff_current"] = rms_diff_current / 10
         self.data["do_1_status"] = BOOLEAN_STATUS[do_1_status]
         self.data["do_2_status"] = BOOLEAN_STATUS[do_2_status]
