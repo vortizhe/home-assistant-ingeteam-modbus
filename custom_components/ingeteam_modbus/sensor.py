@@ -214,6 +214,7 @@ class CalculatedEnergySensor(IntegrationSensor):
         self._unit_time_str = unit_time
         self._attr_icon = "mdi:chart-histogram"
         self._attr_extra_state_attributes = {ATTR_SOURCE_ID: source_entity}
+        self._source_entity = source_entity
         self._hub = hub
 
     @property
