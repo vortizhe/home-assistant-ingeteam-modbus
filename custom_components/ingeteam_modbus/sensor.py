@@ -204,6 +204,7 @@ class CalculatedEnergySensor(IntegrationSensor):
         self._sensor_source_id = source_entity
         self._round_digits = 2
         self._state: Decimal | None = None
+        self._last_valid_state = Decimal | None 
         self._method = "trapezoidal"
 
         self._attr_name = name if name is not None else f"{source_entity} integral"
