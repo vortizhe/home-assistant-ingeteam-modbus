@@ -203,14 +203,14 @@ class IngeteamModbusHub:
             return self._client.read_input_registers(address, count, **kwargs, slave=1)
 
     def read_modbus_data(self):
-        status_data = self.read_input_registers(unit=self._address, address=0, count=80)
+        status_data = self.read_input_registers(unit=self._address, address=0, count=81)
         if status_data.isError():
             return False
 
         return (
             self.read_modbus_data_status(status_data.registers[9:17])
             and self.read_modbus_data_battery(status_data.registers[17:31])
-            and self.read_modbus_data_pv_field(status_data.registers[31:37], status_data.registers[79:80])
+            and self.read_modbus_data_pv_field(status_data.registers[31:37], status_data.registers[78:81])
             and self.read_modbus_data_inverter(status_data.registers[37:67])
             and self.read_modbus_data_meter(status_data.registers[69:73])
         )
@@ -339,7 +339,9 @@ class IngeteamModbusHub:
         pv2_voltage = decoder.decode_16bit_uint()
         pv2_current = decoder.decode_16bit_uint()
         pv2_power = decoder.decode_16bit_uint()
+        total_loads_power = external_pv_decoder.decode_16bit_uint()
         external_pv_power = external_pv_decoder.decode_16bit_uint()
+        ev_power = external_pv_decoder.decode_16bit_int()
 
         self.data["pv1_voltage"] = pv1_voltage
         self.data["pv1_current"] = pv1_current / 100
@@ -347,7 +349,9 @@ class IngeteamModbusHub:
         self.data["pv2_voltage"] = pv2_voltage
         self.data["pv2_current"] = pv2_current / 100
         self.data["pv2_power"] = pv2_power
+        self.data["total_loads_power"] = total_loads_power
         self.data["external_pv_power"] = external_pv_power
+        self.data["ev_power"] = ev_power
 
         self.data["pv_internal_total_power"] = pv1_power + pv2_power
         self.data["pv_total_power"] = pv1_power + pv2_power + external_pv_power
