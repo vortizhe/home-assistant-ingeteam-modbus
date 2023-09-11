@@ -2,6 +2,6 @@
   "name": "Ingeteam Modbus",
   "content_in_root": false,
   "domains": ["sensor"],
-  "homeassistant": "2022.7.0",
+  "homeassistant": "2023.9.1",
   "iot_class": "local_poll"
 }

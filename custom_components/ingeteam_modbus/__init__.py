@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import Optional
 
 import voluptuous as vol
-from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.client import ModbusTcpClient
 from pymodbus.constants import Endian
 from pymodbus.payload import BinaryPayloadDecoder
 
@@ -216,7 +216,7 @@ class IngeteamModbusHub:
         )
 
     def read_modbus_data_status(self, registers):
-        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.Big)
+        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.BIG)
 
         stop_code = decoder.decode_16bit_uint()
         alarm_code = decoder.decode_32bit_uint()
@@ -243,7 +243,7 @@ class IngeteamModbusHub:
 
     def read_modbus_data_inverter(self, registers):
 
-        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.Big)
+        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.BIG)
 
         active_power = decoder.decode_16bit_int()
         reactive_power = decoder.decode_16bit_int()
@@ -309,7 +309,7 @@ class IngeteamModbusHub:
         return True
 
     def read_modbus_data_meter(self, registers):
-        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.Big)
+        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.BIG)
 
         em_voltage = decoder.decode_16bit_uint()
         em_freq = decoder.decode_16bit_uint()
@@ -330,8 +330,8 @@ class IngeteamModbusHub:
         return True
 
     def read_modbus_data_pv_field(self, registers, external_pv_data):
-        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.Big)
-        external_pv_decoder = BinaryPayloadDecoder.fromRegisters(external_pv_data, byteorder=Endian.Big)
+        decoder = BinaryPayloadDecoder.fromRegisters(registers, byteorder=Endian.BIG)
+        external_pv_decoder = BinaryPayloadDecoder.fromRegisters(external_pv_data, byteorder=Endian.BIG)
 
         pv1_voltage = decoder.decode_16bit_uint()
         pv1_current = decoder.decode_16bit_uint()
@@ -360,7 +360,7 @@ class IngeteamModbusHub:
 
     def read_modbus_data_battery(self, registers):
         decoder = BinaryPayloadDecoder.fromRegisters(
-            registers, byteorder=Endian.Big, wordorder=Endian.Little
+            registers, byteorder=Endian.BIG, wordorder=Endian.LITTLE
         )
 
         battery_voltage = decoder.decode_16bit_uint()
