@@ -81,9 +81,9 @@ PV_FIELD_SENSOR_TYPES = {
     "PV_Total_Power": ["PV Total Power", "pv_total_power", "W", None],
     "PV_Total_Energy": ["PV Total Energy", "pv_total_energy", "Wh", None, "pv_total_power"],
     "Total_Loads_Power": ["Total Loads Power", "total_loads_power", "W", None],
-    "Total_Loads_Energy": ["Total Loads Energy", "total_loads_energy", "Wh", "total_loads_power"],
+    "Total_Loads_Energy": ["Total Loads Energy", "total_loads_energy", "Wh", None, "total_loads_power"],
     "EV_Power": ["EV Power", "ev_power", "W", None],
-    "EV_Energy": ["EV Energy", "ev_energy", "Wh", "ev_power"],
+    "EV_Energy": ["EV Energy", "ev_energy", "Wh", None, "ev_power"],
 }
 
 BATTERY_SENSOR_TYPES = {
