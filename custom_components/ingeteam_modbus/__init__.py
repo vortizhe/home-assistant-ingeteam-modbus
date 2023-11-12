@@ -122,7 +122,7 @@ class IngeteamModbusHub:
     ):
         """Initialize the Modbus hub."""
         self._hass = hass
-        self._client = ModbusTcpClient(host=host, port=port)
+        self._client = ModbusTcpClient(host=host, port=port, timeout=max(3, (scan_interval - 1)))
         self._lock = threading.Lock()
         self._name = name
         self._address = address
@@ -161,10 +161,14 @@ class IngeteamModbusHub:
         if not self._sensors:
             return
 
+        if not self._check_and_reconnect():
+            #if not connected, skip
+            return
+
         try:
             update_result = self.read_modbus_data()
         except Exception as e:
-            _LOGGER.exception("Error reading modbus data")
+            _LOGGER.exception("Error reading modbus data", exc_info=True)
             update_result = False
 
         if update_result:
@@ -180,11 +184,26 @@ class IngeteamModbusHub:
         """Disconnect client."""
         with self._lock:
             self._client.close()
+    
+    def _check_and_reconnect(self):
+        if not self._client.connected:
+            _LOGGER.info("modbus client is not connected, trying to reconnect")
+            return self.connect()
+
+        return self._client.connected
 
     def connect(self):
         """Connect client."""
+        result = False
         with self._lock:
-            self._client.connect()
+            result = self._client.connect()
+        if result:
+            _LOGGER.info("successfully connected to %s:%s",
+                         self._client.comm_params.host, self._client.comm_params.port)
+        else:
+            _LOGGER.warning("not able to connect to %s:%s",
+                            self._client.comm_params.host, self._client.comm_params.port)
+        return result
 
     @property
     def has_meter(self):
