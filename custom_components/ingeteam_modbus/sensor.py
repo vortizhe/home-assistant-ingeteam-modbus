@@ -11,20 +11,26 @@ from .const import (
     ATTR_MANUFACTURER,
 )
 from homeassistant.const import (
-    CONF_NAME, 
-    TEMP_CELSIUS,
-    PERCENTAGE
+    CONF_NAME,
+    PERCENTAGE,
+    UnitOfTemperature,
 )
 
 from homeassistant.components.sensor import (
-    STATE_CLASS_MEASUREMENT,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
     SensorDeviceClass
 )
-from homeassistant.components.integration.sensor import IntegrationSensor,ATTR_SOURCE_ID,UNIT_PREFIXES,UNIT_TIME
+from homeassistant.components.integration.sensor import (
+    IntegrationSensor, 
+    ATTR_SOURCE_ID, 
+    UNIT_PREFIXES, 
+    UNIT_TIME, 
+    _IntegrationMethod
+)
 
+from homeassistant.components.integration.const import METHOD_TRAPEZOIDAL
 
 from homeassistant.core import callback
 
@@ -170,7 +176,7 @@ _DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key="C",
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=TEMP_CELSIUS,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
     ),
     "Hz": SensorEntityDescription(
         key="Hz",
@@ -194,6 +200,7 @@ class CalculatedEnergySensor(IntegrationSensor):
         self,
         *
         hub,
+        integration_method = METHOD_TRAPEZOIDAL,
         name: str | None,
         source_entity: str,
         unique_id: str | None):
@@ -205,12 +212,13 @@ class CalculatedEnergySensor(IntegrationSensor):
         self._round_digits = 2
         self._state: Decimal | None = None
         self._last_valid_state = Decimal | None 
-        self._method = "trapezoidal"
+        self._method = _IntegrationMethod.from_name(integration_method)
 
         self._attr_name = name if name is not None else f"{source_entity} integral"
         self._unit_template = f"{'' if unit_prefix is None else unit_prefix}{{}}"
         self._unit_of_measurement: str | None = None
         self._unit_prefix = UNIT_PREFIXES[unit_prefix]
+        self._unit_prefix_string = unit_prefix
         self._unit_time = UNIT_TIME[unit_time]
         self._unit_time_str = unit_time
         self._attr_icon = "mdi:chart-histogram"
@@ -239,7 +247,7 @@ class IngeteamSensor(SensorEntity):
         self._unit_of_measurement = unit if unit != "B" else "%"
         self._icon = icon
         self._device_info = device_info
-        self._attr_state_class = STATE_CLASS_MEASUREMENT
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self.entity_description = _DESCRIPTIONS.get(unit, DIAG_SENSOR)
 
     async def async_added_to_hass(self):
