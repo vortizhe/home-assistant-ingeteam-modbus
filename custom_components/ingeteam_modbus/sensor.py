@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from typing import Optional, Dict, Any
 from decimal import Decimal
 from .const import (
@@ -204,7 +204,8 @@ class CalculatedEnergySensor(IntegrationSensor):
         integration_method = METHOD_TRAPEZOIDAL,
         name: str | None,
         source_entity: str,
-        unique_id: str | None):
+        unique_id: str | None,
+        max_sub_interval: timedelta | None = None):
         """Initialize the integration sensor."""
         unit_prefix = "k"
         unit_time = "h"
@@ -214,7 +215,11 @@ class CalculatedEnergySensor(IntegrationSensor):
         self._state: Decimal | None = None
         self._last_valid_state = Decimal | None 
         self._method = _IntegrationMethod.from_name(integration_method)
-        self._max_sub_interval = None
+        self._max_sub_interval: timedelta | None = (
+            None  # disable time based integration
+            if max_sub_interval is None or max_sub_interval.total_seconds() == 0
+            else max_sub_interval
+        )
         self._last_integration_time: datetime = datetime.now(tz=UTC)
         self._last_integration_trigger = _IntegrationMethod.from_name(integration_method)
 
