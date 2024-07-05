@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, UTC
 from typing import Optional, Dict, Any
 from decimal import Decimal
 from .const import (
@@ -213,6 +214,10 @@ class CalculatedEnergySensor(IntegrationSensor):
         self._state: Decimal | None = None
         self._last_valid_state = Decimal | None 
         self._method = _IntegrationMethod.from_name(integration_method)
+        self._max_sub_interval = None
+        self._last_integration_time: datetime = datetime.now(tz=UTC)
+        self._last_integration_trigger = _IntegrationMethod.from_name(integration_method)
+
 
         self._attr_name = name if name is not None else f"{source_entity} integral"
         self._unit_template = f"{'' if unit_prefix is None else unit_prefix}{{}}"
