@@ -28,7 +28,8 @@ from homeassistant.components.integration.sensor import (
     ATTR_SOURCE_ID, 
     UNIT_PREFIXES, 
     UNIT_TIME, 
-    _IntegrationMethod
+    _IntegrationMethod,
+    _IntegrationTrigger
 )
 
 from homeassistant.components.integration.const import METHOD_TRAPEZOIDAL
@@ -222,7 +223,7 @@ class CalculatedEnergySensor(IntegrationSensor):
         )
         self._max_sub_interval_exceeded_callback: CALLBACK_TYPE = lambda *args: None
         self._last_integration_time: datetime = datetime.now(tz=UTC)
-        self._last_integration_trigger = _IntegrationMethod.from_name(integration_method)
+        self._last_integration_trigger = _IntegrationTrigger.StateEvent
 
 
         self._attr_name = name if name is not None else f"{source_entity} integral"
