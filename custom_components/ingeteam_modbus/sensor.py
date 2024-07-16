@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, UTC, timedelta
 from typing import Optional, Dict, Any
 from decimal import Decimal
 from .const import (
@@ -27,12 +28,13 @@ from homeassistant.components.integration.sensor import (
     ATTR_SOURCE_ID, 
     UNIT_PREFIXES, 
     UNIT_TIME, 
-    _IntegrationMethod
+    _IntegrationMethod,
+    _IntegrationTrigger
 )
 
 from homeassistant.components.integration.const import METHOD_TRAPEZOIDAL
 
-from homeassistant.core import callback
+from homeassistant.core import callback, CALLBACK_TYPE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -203,7 +205,8 @@ class CalculatedEnergySensor(IntegrationSensor):
         integration_method = METHOD_TRAPEZOIDAL,
         name: str | None,
         source_entity: str,
-        unique_id: str | None):
+        unique_id: str | None,
+        max_sub_interval: timedelta | None = None,):
         """Initialize the integration sensor."""
         unit_prefix = "k"
         unit_time = "h"
@@ -213,6 +216,15 @@ class CalculatedEnergySensor(IntegrationSensor):
         self._state: Decimal | None = None
         self._last_valid_state = Decimal | None 
         self._method = _IntegrationMethod.from_name(integration_method)
+        self._max_sub_interval: timedelta | None = (
+            None  # disable time based integration
+            if max_sub_interval is None or max_sub_interval.total_seconds() == 0
+            else max_sub_interval
+        )
+        self._max_sub_interval_exceeded_callback: CALLBACK_TYPE = lambda *args: None
+        self._last_integration_time: datetime = datetime.now(tz=UTC)
+        self._last_integration_trigger = _IntegrationTrigger.StateEvent
+
 
         self._attr_name = name if name is not None else f"{source_entity} integral"
         self._unit_template = f"{'' if unit_prefix is None else unit_prefix}{{}}"
