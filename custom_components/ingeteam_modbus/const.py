@@ -165,6 +165,7 @@ BATTERY_LIMITATION_REASONS = {
     10: "Digital Input 2",
     11: "Digital Input 3",
     12: "PV Charging scheduling",
+    13: "EMS Strategy",
 }
 
 AP_REDUCTION_REASONS = {
