@@ -200,7 +200,7 @@ class IngeteamModbusHub:
     def read_input_registers(self, unit, address, count):
         """Read input registers."""
         with self._lock:
-            return self._client.read_input_registers(address=address, count=count, slave=unit)
+            return self._client.read_input_registers(address=address, count=count, device_id=unit)
 
     # -------------------------
     # Utilidades de decodificación
