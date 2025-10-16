@@ -167,6 +167,9 @@ class IngeteamModbusHub:
             return False
         except Exception:
             _LOGGER.exception("Unexpected error while reading modbus data")
+            with self._lock:
+                self._client.close()
+                _LOGGER.exception("Refreshed client connection")
             return False
 
     @property
