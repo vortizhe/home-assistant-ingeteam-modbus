@@ -95,16 +95,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 async def async_unload_entry(hass, entry):
     """Unload Ingeteam mobus entry."""
     hub: "IngeteamModbusHub" = hass.data[DOMAIN][entry.data["name"]]["hub"]
-    hub.close()
-
+    hub._unloading = True
     unload_ok = all(
         await asyncio.gather(
             *[hass.config_entries.async_forward_entry_unload(entry, component) for component in PLATFORMS]
         )
     )
     if not unload_ok:
+        hub._unloading = False
+        if not hub._sensors:
+            await hub.async_close()
         return False
 
+    await hub.async_close()
     hass.data[DOMAIN].pop(entry.data["name"])
     return True
 
@@ -127,12 +130,14 @@ class IngeteamModbusHub:
         self._unsub_interval_method = None
         self._sensors = []
         self.data = {}
+        self._refresh_lock = asyncio.Lock()
+        self._unloading = False
 
     @callback
     def async_add_ingeteam_sensor(self, update_callback):
         """Listen for data updates."""
         if not self._sensors:
-            self.connect()
+            self._hass.async_create_task(self._async_connect())
             self._unsub_interval_method = async_track_time_interval(
                 self._hass, self.async_refresh_modbus_data, self._scan_interval
             )
@@ -145,29 +150,92 @@ class IngeteamModbusHub:
         if not self._sensors and self._unsub_interval_method:
             self._unsub_interval_method()
             self._unsub_interval_method = None
-            self.close()
+            if not self._unloading:
+                self._hass.async_create_task(self.async_close())
+
+    async def _async_connect(self) -> bool:
+        """Connect without blocking Home Assistant's event loop."""
+        return await self._hass.async_add_executor_job(self.connect)
+
+    async def async_close(self) -> None:
+        """Close the client without blocking Home Assistant's event loop."""
+        await self._hass.async_add_executor_job(self.close)
 
     async def async_refresh_modbus_data(self, _now: Optional[int] = None) -> None:
         """Time to update."""
         if not self._sensors:
             return
-        update_result = await self._hass.async_add_executor_job(self._update_modbus_data)
+
+        if self._refresh_lock.locked():
+            _LOGGER.debug("Skipping Modbus refresh because the previous refresh is still running")
+            return
+
+        async with self._refresh_lock:
+            # Await the executor job to completion. Cancellation of this coroutine
+            # must not release the refresh guard while its worker still uses Modbus.
+            worker = self._hass.async_add_executor_job(self._update_modbus_data)
+            was_cancelled = False
+            while True:
+                try:
+                    update_result = await asyncio.shield(worker)
+                    break
+                except asyncio.CancelledError:
+                    # shield protects the executor Future. Ignore cancellation
+                    # until that Future is actually done, then propagate it.
+                    was_cancelled = True
+                    if worker.done():
+                        break
+            if was_cancelled:
+                # Retrieve any worker exception before propagating cancellation.
+                if worker.done() and not worker.cancelled():
+                    try:
+                        worker.result()
+                    except Exception:
+                        pass
+                raise asyncio.CancelledError
+
         if update_result:
-            for update_callback in self._sensors:
+            _LOGGER.debug("Modbus refresh completed successfully for %s", self._name)
+            for update_callback in tuple(self._sensors):
                 update_callback()
 
     def _update_modbus_data(self) -> bool:
-        """Synchronously fetch data from the modbus device. To be run in an executor."""
-        if not self._check_and_reconnect():
-            return False
-        try:
-            return self.read_modbus_data()
-        except ModbusException as e:
-            _LOGGER.warning("Modbus exception occurred while reading data: %s", e)
-            return False
-        except Exception:
-            _LOGGER.exception("Unexpected error while reading modbus data")
-            return False
+        """Run one complete Modbus transaction under the synchronous client lock."""
+        with self._lock:
+            reconnected = False
+            try:
+                if not self._client.is_socket_open():
+                    _LOGGER.debug("Connecting/reconnecting Modbus client for %s", self._name)
+                    if not self._client.connect():
+                        _LOGGER.debug("Modbus connection attempt failed for %s", self._name)
+                        self._close_client_after_error("connection attempt failed")
+                        return False
+                    reconnected = True
+                    _LOGGER.debug("Modbus client connected for %s", self._name)
+
+                result = self.read_modbus_data()
+            except ModbusException as err:
+                _LOGGER.warning("Modbus exception occurred while reading data: %s", err)
+                self._close_client_after_error("Modbus exception")
+                return False
+            except Exception:
+                _LOGGER.exception("Unexpected error during Modbus transaction")
+                self._close_client_after_error("unexpected exception")
+                return False
+
+            if not result:
+                # Error responses and incomplete replies can leave pymodbus's
+                # transaction stream unusable; reconnect cleanly next cycle.
+                self._close_client_after_error("unsuccessful/incomplete read")
+                return False
+            if reconnected:
+                _LOGGER.debug("Modbus connection recovered for %s", self._name)
+            return True
+
+    def _close_client_after_error(self, reason: str) -> None:
+        """Close after a failed operation; caller must hold ``_lock``."""
+        _LOGGER.debug("Closing Modbus client for %s after %s", self._name, reason)
+        self._client.close()
 
     @property
     def name(self):
