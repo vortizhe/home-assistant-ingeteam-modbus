@@ -209,15 +209,20 @@ class IngeteamSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self._hub.async_add_ingeteam_sensor(self._modbus_data_updated)
+        await self._hub.async_add_ingeteam_sensor(self._modbus_data_updated)
 
     async def async_will_remove_from_hass(self) -> None:
         """Unregister callbacks."""
-        self._hub.async_remove_ingeteam_sensor(self._modbus_data_updated)
+        await self._hub.async_remove_ingeteam_sensor(self._modbus_data_updated)
 
     @callback
     def _modbus_data_updated(self):
         self.async_write_ha_state()
+
+    @property
+    def available(self) -> bool:
+        """Return True while the hub is talking to the inverter."""
+        return self._hub.online and self._key in self._hub.data
 
     @property
     def native_value(self):

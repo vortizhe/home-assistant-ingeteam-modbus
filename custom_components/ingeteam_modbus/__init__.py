@@ -4,11 +4,9 @@ import threading
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
-import voluptuous as vol
 from pymodbus.client import ModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
-import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_NAME,
@@ -16,12 +14,12 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_SCAN_INTERVAL,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     DOMAIN,
-    DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_MODBUS_ADDRESS,
     CONF_MODBUS_ADDRESS,
@@ -39,41 +37,32 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-INGETEAM_MODBUS_SCHEMA = vol.Schema(
-    {
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Required(CONF_HOST): cv.string,
-        vol.Required(CONF_PORT): cv.string,
-        vol.Optional(CONF_MODBUS_ADDRESS, default=DEFAULT_MODBUS_ADDRESS): cv.positive_int,
-        vol.Optional(CONF_READ_METER, default=DEFAULT_READ_METER): cv.boolean,
-        vol.Optional(CONF_READ_BATTERY, default=DEFAULT_READ_BATTERY): cv.boolean,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.positive_int,
-    }
-)
-
-CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({cv.slug: INGETEAM_MODBUS_SCHEMA})}, extra=vol.ALLOW_EXTRA)
-
 PLATFORMS = ["sensor"]
 
 # Number of input registers read in a single request (30001 .. 30081).
 REGISTER_COUNT = 81
 
 
-async def async_setup(hass, config):
+def _option(entry: ConfigEntry, key: str, default: Any) -> Any:
+    """Return an entry option, falling back to the original entry data."""
+    return entry.options.get(key, entry.data.get(key, default))
+
+
+async def async_setup(hass: HomeAssistant, config) -> bool:
     """Set up the Ingeteam modbus component."""
-    hass.data[DOMAIN] = {}
+    hass.data.setdefault(DOMAIN, {})
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Set up a ingeteam mobus."""
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up an Ingeteam modbus hub from a config entry."""
     host = entry.data[CONF_HOST]
     name = entry.data[CONF_NAME]
-    port = entry.data[CONF_PORT]
-    address = entry.data.get(CONF_MODBUS_ADDRESS, 1)
-    scan_interval = entry.data[CONF_SCAN_INTERVAL]
-    read_meter = entry.data.get(CONF_READ_METER, False)
-    read_battery = entry.data.get(CONF_READ_BATTERY, False)
+    port = int(entry.data[CONF_PORT])
+    address = _option(entry, CONF_MODBUS_ADDRESS, DEFAULT_MODBUS_ADDRESS)
+    scan_interval = _option(entry, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    read_meter = _option(entry, CONF_READ_METER, DEFAULT_READ_METER)
+    read_battery = _option(entry, CONF_READ_BATTERY, DEFAULT_READ_BATTERY)
 
     _LOGGER.debug("Setup %s.%s", DOMAIN, name)
 
@@ -88,21 +77,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         read_battery,
     )
 
-    """Register the hub."""
-    hass.data[DOMAIN][name] = {"hub": hub}
+    if not await hub.async_initialize():
+        # Do not leak the socket: HA will retry the setup with a new hub.
+        await hass.async_add_executor_job(hub.close)
+        raise ConfigEntryNotReady(f"Could not read from {host}:{port}")
+
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][name] = {"hub": hub, "entry_id": entry.entry_id}
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass, entry):
-    """Unload Ingeteam mobus entry."""
-    hub: "IngeteamModbusHub" = hass.data[DOMAIN][entry.data["name"]]["hub"]
-    hub.close()
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the entry when its options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload an Ingeteam modbus entry."""
     if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
 
-    hass.data[DOMAIN].pop(entry.data["name"])
+    name = entry.data[CONF_NAME]
+    stored = hass.data.get(DOMAIN, {}).get(name)
+    # Another entry may have taken over this name already.
+    if stored is not None and stored.get("entry_id") == entry.entry_id:
+        await stored["hub"].async_shutdown()
+        hass.data[DOMAIN].pop(name)
     return True
 
 
@@ -120,42 +122,58 @@ class IngeteamModbusHub:
         self._port = port
         self.read_meter = read_meter
         self.read_battery = read_battery
+        self.online = False
         self._scan_interval = timedelta(seconds=scan_interval)
         self._unsub_interval_method = None
         self._sensors = []
-        self.data = {}
+        self.data: Dict[str, Any] = {}
 
-    @callback
-    def async_add_ingeteam_sensor(self, update_callback):
+    async def async_initialize(self) -> bool:
+        """Connect and perform the first read, so the entities start populated."""
+        if not await self._hass.async_add_executor_job(self.connect):
+            return False
+        self.online = await self._hass.async_add_executor_job(self._update_modbus_data)
+        return self.online
+
+    async def async_add_ingeteam_sensor(self, update_callback) -> None:
         """Listen for data updates."""
         if not self._sensors:
-            self.connect()
+            await self._hass.async_add_executor_job(self._ensure_connected)
             self._unsub_interval_method = async_track_time_interval(
                 self._hass, self.async_refresh_modbus_data, self._scan_interval
             )
         self._sensors.append(update_callback)
 
-    @callback
-    def async_remove_ingeteam_sensor(self, update_callback):
+    async def async_remove_ingeteam_sensor(self, update_callback) -> None:
         """Remove data update."""
-        self._sensors.remove(update_callback)
-        if not self._sensors and self._unsub_interval_method:
+        if update_callback in self._sensors:
+            self._sensors.remove(update_callback)
+        if not self._sensors:
+            await self.async_shutdown()
+
+    async def async_shutdown(self) -> None:
+        """Stop polling and close the connection."""
+        if self._unsub_interval_method:
             self._unsub_interval_method()
             self._unsub_interval_method = None
-            self.close()
+        await self._hass.async_add_executor_job(self.close)
 
     async def async_refresh_modbus_data(self, _now: Optional[int] = None) -> None:
         """Time to update."""
         if not self._sensors:
             return
+        was_online = self.online
         update_result = await self._hass.async_add_executor_job(self._update_modbus_data)
-        if update_result:
-            for update_callback in self._sensors:
+        self.online = update_result
+        # Notify on success and on the transition to unavailable, so the
+        # entities never keep showing a stale value as if it were live.
+        if update_result or was_online:
+            for update_callback in list(self._sensors):
                 update_callback()
 
     def _update_modbus_data(self) -> bool:
         """Synchronously fetch data from the modbus device. To be run in an executor."""
-        if not self._check_and_reconnect():
+        if not self._ensure_connected():
             return False
         try:
             return self.read_modbus_data()
@@ -172,12 +190,12 @@ class IngeteamModbusHub:
         return self._name
 
     def close(self):
-        """Disconnect client."""
+        """Disconnect client. Blocking: run it in an executor."""
         with self._lock:
             self._client.close()
 
-    def _check_and_reconnect(self) -> bool:
-        """Check connection and reconnect if needed."""
+    def _ensure_connected(self) -> bool:
+        """Check connection and reconnect if needed. Blocking."""
         with self._lock:
             if not self._client.is_socket_open():
                 _LOGGER.info("Modbus client is not connected, trying to reconnect")
@@ -185,7 +203,7 @@ class IngeteamModbusHub:
             return True
 
     def connect(self) -> bool:
-        """Connect client."""
+        """Connect client. Blocking: run it in an executor."""
         with self._lock:
             result = self._client.connect()
             if result:
