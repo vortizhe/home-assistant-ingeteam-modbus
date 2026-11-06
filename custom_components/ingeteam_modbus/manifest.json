@@ -5,7 +5,9 @@
   "codeowners": ["@vortizhe"],
   "config_flow": true,
   "dependencies": ["integration"],
+  "integration_type": "device",
   "iot_class": "local_polling",
+  "loggers": ["pymodbus"],
   "requirements": ["pymodbus>=3.10.0"],
-  "version": "0.1.5"
+  "version": "0.2.0"
 }
