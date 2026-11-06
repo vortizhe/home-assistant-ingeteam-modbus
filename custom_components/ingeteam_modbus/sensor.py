@@ -111,14 +111,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 )
         return built
 
+    # Every table is built unconditionally: the register blocks are fixed, so
+    # the data is read anyway and hiding the entities would gain nothing.
     entities = []
     entities += build(INVERTER_STATUS_TYPES)
     entities += build(INVERTER_SENSOR_TYPES)
     entities += build(PV_FIELD_SENSOR_TYPES)
-    if hub.read_meter:
-        entities += build(METER_SENSOR_TYPES)
-    if hub.read_battery:
-        entities += build(BATTERY_SENSOR_TYPES)
+    entities += build(METER_SENSOR_TYPES)
+    entities += build(BATTERY_SENSOR_TYPES)
 
     async_add_entities(entities)
     return True

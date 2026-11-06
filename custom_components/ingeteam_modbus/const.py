@@ -1,14 +1,66 @@
+from typing import NamedTuple
+
 DOMAIN = "ingeteam_modbus"
 DEFAULT_NAME = "ingeteam"
-DEFAULT_SCAN_INTERVAL = 5
 DEFAULT_PORT = 502
 DEFAULT_MODBUS_ADDRESS = 1
-DEFAULT_READ_METER = False
-DEFAULT_READ_BATTERY = False
 ATTR_MANUFACTURER = "Ingeteam"
 CONF_MODBUS_ADDRESS = "modbus_address"
-CONF_READ_METER = "read_meter"
-CONF_READ_BATTERY = "read_battery"
+
+# Socket timeout. It stays below the shortest block interval so a slow read
+# never piles up behind the next one.
+MODBUS_TIMEOUT = 2
+
+
+class ModbusBlock(NamedTuple):
+    """One Modbus read: a contiguous register range with its own cadence.
+
+    The inverter chokes when asked for all 81 registers at once, so the read is
+    split into small independent blocks. ``address`` is the zero based offset of
+    the first input register (register 30001 + address) and ``count`` how many
+    follow it.
+
+    ``interval`` and ``offset`` are both in seconds. Every interval is a
+    multiple of BLOCK_BASE_INTERVAL and every offset is a different whole second
+    inside that window, which is what guarantees that two blocks are never read
+    at the same instant: the phase difference is preserved forever, instead of
+    drifting into collisions the way coprime intervals (3 s and 5 s, say)
+    unavoidably would.
+
+    ``primary`` marks the one block that decides availability. A failure of any
+    other block only logs a warning and keeps the previous values, so a slow
+    block going quiet does not take every entity down with it.
+    """
+
+    key: str
+    address: int
+    count: int
+    interval: float
+    offset: float
+    primary: bool = False
+
+
+# Base window. Every block interval has to be a multiple of it.
+BLOCK_BASE_INTERVAL = 5
+
+MODBUS_BLOCKS: tuple[ModbusBlock, ...] = (
+    # 30038-30054: inverter AC power, power reduction, critical loads and the
+    # internal meter. Availability is tied to this one.
+    ModbusBlock("ac", 37, 17, 5, 0.0, primary=True),
+    # 30070-30081: external meter (grid), extended BMS registers, total loads,
+    # external PV and EV power.
+    ModbusBlock("grid", 69, 12, 5, 1.0),
+    # 30007-30012: lifetime counter, stop code and alarm code. Note that an
+    # alarm therefore takes up to 90 s to show up; drop this to 30 s if an
+    # automation has to react to it.
+    ModbusBlock("life", 6, 6, 90, 2.0),
+    # 30016-30037: inverter status, the whole battery block and both PV
+    # strings. Status rides along for free, since it is contiguous.
+    ModbusBlock("state", 15, 22, 5, 3.0),
+    # 30055-30069: DC bus, temperatures, insulation, differential current,
+    # digital inputs and outputs, BMS flags.
+    ModbusBlock("diagnostics", 54, 15, 60, 4.0),
+)
 
 # Sensor tables. Every row is
 #   [friendly name, data key, unit code, icon]

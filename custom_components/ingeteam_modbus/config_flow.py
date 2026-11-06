@@ -5,20 +5,15 @@ import re
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_NAME, CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_NAME, CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 
 from .const import (
     DOMAIN,
     DEFAULT_NAME,
-    DEFAULT_SCAN_INTERVAL,
     DEFAULT_PORT,
     DEFAULT_MODBUS_ADDRESS,
     CONF_MODBUS_ADDRESS,
-    CONF_READ_METER,
-    CONF_READ_BATTERY,
-    DEFAULT_READ_METER,
-    DEFAULT_READ_BATTERY,
 )
 
 DATA_SCHEMA = vol.Schema(
@@ -27,9 +22,6 @@ DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
         vol.Optional(CONF_MODBUS_ADDRESS, default=DEFAULT_MODBUS_ADDRESS): int,
-        vol.Optional(CONF_READ_METER, default=DEFAULT_READ_METER): bool,
-        vol.Optional(CONF_READ_BATTERY, default=DEFAULT_READ_BATTERY): bool,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
     }
 )
 
@@ -99,7 +91,12 @@ class IngeteamModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class IngeteamModbusOptionsFlow(config_entries.OptionsFlow):
-    """Allow the polling and feature options to be changed after setup."""
+    """Allow the modbus address to be changed after setup.
+
+    Nothing else is configurable: every register block has a fixed interval and
+    offset in const.py, picked so that two reads never land on the device at
+    the same instant, and every sensor the register map covers is created.
+    """
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -118,17 +115,6 @@ class IngeteamModbusOptionsFlow(config_entries.OptionsFlow):
                     CONF_MODBUS_ADDRESS,
                     default=current(CONF_MODBUS_ADDRESS, DEFAULT_MODBUS_ADDRESS),
                 ): int,
-                vol.Optional(
-                    CONF_READ_METER, default=current(CONF_READ_METER, DEFAULT_READ_METER)
-                ): bool,
-                vol.Optional(
-                    CONF_READ_BATTERY,
-                    default=current(CONF_READ_BATTERY, DEFAULT_READ_BATTERY),
-                ): bool,
-                vol.Optional(
-                    CONF_SCAN_INTERVAL,
-                    default=current(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-                ): vol.All(int, vol.Range(min=1, max=600)),
             }
         )
 

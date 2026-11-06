@@ -11,8 +11,7 @@ This custom component is experimental version with featured not (yet) present in
 
 - Installation through Config Flow UI.
 - Separate sensor per register
-- Configurable polling interval
-- All modbus registers are read within 1 read cycle for data consistency between sensors.
+- Registers are read in small blocks, each on its own fixed interval (5 s for power, 60 s for diagnostics, 90 s for lifetime counters), staggered so two reads never reach the inverter at the same time.
 - Possible to select other modbus address than the default of 1
 - Supports reading inverter data 
 - Supports reading external meter data

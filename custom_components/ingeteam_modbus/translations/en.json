@@ -8,10 +8,7 @@
           "host": "The ip-address of your Ingeteam device",
           "name": "The prefix to be used for your Ingeteam sensors",
           "port": "The TCP port on which to connect to the Ingeteam",
-          "modbus_address": "The modbus address",
-          "read_meter": "Read meter data (only when installed)",
-          "read_battery": "Read battery data (only when installed)",
-          "scan_interval": "Modbus polling frequency in seconds"
+          "modbus_address": "The modbus address"
         }
       }
     },
@@ -29,10 +26,7 @@
       "init": {
         "title": "Ingeteam Modbus options",
         "data": {
-          "modbus_address": "The modbus address",
-          "read_meter": "Read meter data (only when installed)",
-          "read_battery": "Read battery data (only when installed)",
-          "scan_interval": "Modbus polling frequency in seconds"
+          "modbus_address": "The modbus address"
         }
       }
     }
