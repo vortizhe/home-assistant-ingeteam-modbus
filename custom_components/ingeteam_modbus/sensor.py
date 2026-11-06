@@ -1,45 +1,40 @@
+"""Sensor platform for the Ingeteam Modbus integration."""
+import inspect
 import logging
-from datetime import datetime, UTC, timedelta
-from typing import Optional, Dict, Any
-from decimal import Decimal
-from .const import (
-    INVERTER_STATUS_TYPES,
-    INVERTER_SENSOR_TYPES,
-    METER_SENSOR_TYPES,
-    PV_FIELD_SENSOR_TYPES,
-    BATTERY_SENSOR_TYPES,
-    DOMAIN,
-    ATTR_MANUFACTURER,
+from datetime import timedelta
+from typing import Any, Dict, Optional
+
+from homeassistant.components.integration.const import METHOD_TRAPEZOIDAL
+from homeassistant.components.integration.sensor import IntegrationSensor
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.const import (
     CONF_NAME,
     PERCENTAGE,
     UnitOfTemperature,
+    UnitOfTime,
 )
+from homeassistant.core import callback
 
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-    SensorDeviceClass
+from .const import (
+    ATTR_MANUFACTURER,
+    BATTERY_SENSOR_TYPES,
+    DOMAIN,
+    INVERTER_SENSOR_TYPES,
+    INVERTER_STATUS_TYPES,
+    METER_SENSOR_TYPES,
+    PV_FIELD_SENSOR_TYPES,
 )
-from homeassistant.components.integration.sensor import (
-    IntegrationSensor, 
-    ATTR_SOURCE_ID, 
-    UNIT_PREFIXES, 
-    UNIT_TIME, 
-    _IntegrationMethod,
-    _IntegrationTrigger
-)
-
-from homeassistant.components.integration.const import METHOD_TRAPEZOIDAL
-
-from homeassistant.core import callback, CALLBACK_TYPE
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up the Ingeteam sensors from a config entry."""
     hub_name = entry.data[CONF_NAME]
     hub = hass.data[DOMAIN][hub_name]["hub"]
 
@@ -49,103 +44,51 @@ async def async_setup_entry(hass, entry, async_add_entities):
         "manufacturer": ATTR_MANUFACTURER,
     }
 
+    def build(sensor_types):
+        """Create the entities described by one of the const.py tables.
+
+        A table row is [friendly name, data key, unit, icon] and, when it has a
+        fifth element, the slug of the power sensor whose value has to be
+        integrated to obtain this (energy) sensor.
+        """
+        built = []
+        for sensor_info in sensor_types.values():
+            if len(sensor_info) > 4:
+                built.append(
+                    CalculatedEnergySensor(
+                        hub,
+                        name=f"{hub_name} {sensor_info[0]}",
+                        source_entity=f"sensor.{hub_name}_{sensor_info[4]}",
+                        unique_id=f"{hub_name}_{sensor_info[1]}",
+                        device_info=device_info,
+                    )
+                )
+            else:
+                built.append(
+                    IngeteamSensor(
+                        hub_name,
+                        hub,
+                        device_info,
+                        sensor_info[0],
+                        sensor_info[1],
+                        sensor_info[2],
+                        sensor_info[3],
+                    )
+                )
+        return built
+
     entities = []
-    for sensor_info in INVERTER_STATUS_TYPES.values():
-        sensor = IngeteamSensor(
-            hub_name,
-            hub,
-            device_info,
-            sensor_info[0],
-            sensor_info[1],
-            sensor_info[2],
-            sensor_info[3],
-        )
-        entities.append(sensor)
-    
-    for sensor_info in INVERTER_SENSOR_TYPES.values():
-        if len(sensor_info) > 4 :
-            sensor = CalculatedEnergySensor(
-                hub,
-                name=f'{hub_name} {sensor_info[0]}', 
-                source_entity=f'sensor.{hub_name}_{sensor_info[4]}',
-                unique_id=f'{hub_name}_{sensor_info[1]}',
-            )
-        else:  
-            sensor = IngeteamSensor(
-                hub_name,
-                hub,
-                device_info,
-                sensor_info[0],
-                sensor_info[1],
-                sensor_info[2],
-                sensor_info[3],
-            )
-        entities.append(sensor)
-
-    for sensor_info in PV_FIELD_SENSOR_TYPES.values():
-        if len(sensor_info) > 4 :
-            sensor = CalculatedEnergySensor(
-                hub,
-                name=f'{hub_name} {sensor_info[0]}', 
-                source_entity=f'sensor.{hub_name}_{sensor_info[4]}',
-                unique_id=f'{hub_name}_{sensor_info[1]}',
-            )
-        else:   
-            sensor = IngeteamSensor(
-                hub_name,
-                hub,
-                device_info,
-                sensor_info[0],
-                sensor_info[1],
-                sensor_info[2],
-                sensor_info[3],
-            )
-        entities.append(sensor)
-
-    if hub.read_meter == True:
-        for sensor_info in METER_SENSOR_TYPES.values():
-            if len(sensor_info) > 4 :
-                sensor = CalculatedEnergySensor(
-                    hub,
-                    name=f'{hub_name} {sensor_info[0]}', 
-                    source_entity=f'sensor.{hub_name}_{sensor_info[4]}',
-                    unique_id=f'{hub_name}_{sensor_info[1]}',
-                )
-            else:    
-                sensor = IngeteamSensor(
-                    hub_name,
-                    hub,
-                    device_info,
-                    sensor_info[0],
-                    sensor_info[1],
-                    sensor_info[2],
-                    sensor_info[3],
-                )
-            entities.append(sensor)
-
-    if hub.read_battery == True:
-        for sensor_info in BATTERY_SENSOR_TYPES.values():
-            if len(sensor_info) > 4 :
-                sensor = CalculatedEnergySensor(
-                    hub,
-                    name=f'{hub_name} {sensor_info[0]}', 
-                    source_entity=f'sensor.{hub_name}_{sensor_info[4]}',
-                    unique_id=f'{hub_name}_{sensor_info[1]}',
-                )
-            else:    
-                sensor = IngeteamSensor(
-                    hub_name,
-                    hub,
-                    device_info,
-                    sensor_info[0],
-                    sensor_info[1],
-                    sensor_info[2],
-                    sensor_info[3],
-                )
-            entities.append(sensor)
+    entities += build(INVERTER_STATUS_TYPES)
+    entities += build(INVERTER_SENSOR_TYPES)
+    entities += build(PV_FIELD_SENSOR_TYPES)
+    if hub.read_meter:
+        entities += build(METER_SENSOR_TYPES)
+    if hub.read_battery:
+        entities += build(BATTERY_SENSOR_TYPES)
 
     async_add_entities(entities)
     return True
+
 
 _DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     "A": SensorEntityDescription(
@@ -197,54 +140,54 @@ DIAG_SENSOR = SensorEntityDescription(
     state_class=SensorStateClass.MEASUREMENT,
 )
 
+
 class CalculatedEnergySensor(IntegrationSensor):
+    """Energy sensor obtained by integrating one of the hub's power sensors."""
+
     def __init__(
         self,
-        *
         hub,
-        integration_method = METHOD_TRAPEZOIDAL,
+        *,
         name: str | None,
         source_entity: str,
         unique_id: str | None,
-        max_sub_interval: timedelta | None = None,):
+        device_info: Optional[Dict[str, Any]] = None,
+        integration_method: str = METHOD_TRAPEZOIDAL,
+        max_sub_interval: timedelta | None = None,
+    ) -> None:
         """Initialize the integration sensor."""
-        unit_prefix = "k"
-        unit_time = "h"
-        self._attr_unique_id = unique_id
-        self._sensor_source_id = source_entity
-        self._round_digits = 2
-        self._state: Decimal | None = None
-        self._last_valid_state = Decimal | None 
-        self._method = _IntegrationMethod.from_name(integration_method)
-        self._max_sub_interval: timedelta | None = (
-            None  # disable time based integration
-            if max_sub_interval is None or max_sub_interval.total_seconds() == 0
-            else max_sub_interval
-        )
-        self._max_sub_interval_exceeded_callback: CALLBACK_TYPE = lambda *args: None
-        self._last_integration_time: datetime = datetime.now(tz=UTC)
-        self._last_integration_trigger = _IntegrationTrigger.StateEvent
+        kwargs: dict[str, Any] = {
+            "integration_method": integration_method,
+            "name": name,
+            "round_digits": 2,
+            "source_entity": source_entity,
+            "unique_id": unique_id,
+            "device_class": SensorDeviceClass.ENERGY,
+            "unit_prefix": "k",
+            "unit_time": UnitOfTime.HOURS,
+            "max_sub_interval": max_sub_interval,
+        }
 
+        # IntegrationSensor is core-internal API and its signature changes
+        # between Home Assistant releases: only forward what it accepts.
+        params = inspect.signature(IntegrationSensor.__init__).parameters
+        if not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
+            dropped = [key for key in kwargs if key not in params]
+            if dropped:
+                _LOGGER.debug("IntegrationSensor does not accept %s, skipping", dropped)
+            kwargs = {k: v for k, v in kwargs.items() if k in params}
 
-        self._attr_name = name if name is not None else f"{source_entity} integral"
-        self._unit_template = f"{'' if unit_prefix is None else unit_prefix}{{}}"
-        self._unit_of_measurement: str | None = None
-        self._unit_prefix = UNIT_PREFIXES[unit_prefix]
-        self._unit_prefix_string = unit_prefix
-        self._unit_time = UNIT_TIME[unit_time]
-        self._unit_time_str = unit_time
+        super().__init__(**kwargs)
+
         self._attr_icon = "mdi:chart-histogram"
-        self._attr_extra_state_attributes = {ATTR_SOURCE_ID: source_entity}
-        self._source_entity = source_entity
+        if device_info is not None:
+            self._attr_device_info = device_info
         self._hub = hub
 
     @property
     def hub(self):
+        """Return the Modbus hub this sensor belongs to."""
         return self._hub
-    
-    @property
-    def device_class(self):
-        return SensorDeviceClass.ENERGY
 
 
 class IngeteamSensor(SensorEntity):
@@ -267,16 +210,12 @@ class IngeteamSensor(SensorEntity):
         self._hub.async_add_ingeteam_sensor(self._modbus_data_updated)
 
     async def async_will_remove_from_hass(self) -> None:
+        """Unregister callbacks."""
         self._hub.async_remove_ingeteam_sensor(self._modbus_data_updated)
 
     @callback
     def _modbus_data_updated(self):
         self.async_write_ha_state()
-
-    @callback
-    def _update_state(self):
-        if self._key in self._hub.data:
-            self._state = self._hub.data[self._key]
 
     @property
     def name(self):
@@ -285,6 +224,7 @@ class IngeteamSensor(SensorEntity):
 
     @property
     def unique_id(self) -> Optional[str]:
+        """Return the unique id."""
         return f"{self._platform_name}_{self._key}"
 
     @property
@@ -302,12 +242,14 @@ class IngeteamSensor(SensorEntity):
         """Return the state of the sensor."""
         if self._key in self._hub.data:
             return self._hub.data[self._key]
+        return None
 
     @property
     def should_poll(self) -> bool:
-        """Data is delivered by the hub"""
+        """Data is delivered by the hub."""
         return False
 
     @property
     def device_info(self) -> Optional[Dict[str, Any]]:
+        """Return the device info."""
         return self._device_info

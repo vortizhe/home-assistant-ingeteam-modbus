@@ -1,5 +1,4 @@
 """The Ingeteam Modbus Integration."""
-import asyncio
 import logging
 import threading
 from datetime import timedelta
@@ -97,12 +96,7 @@ async def async_unload_entry(hass, entry):
     hub: "IngeteamModbusHub" = hass.data[DOMAIN][entry.data["name"]]["hub"]
     hub.close()
 
-    unload_ok = all(
-        await asyncio.gather(
-            *[hass.config_entries.async_forward_entry_unload(entry, component) for component in PLATFORMS]
-        )
-    )
-    if not unload_ok:
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         return False
 
     hass.data[DOMAIN].pop(entry.data["name"])

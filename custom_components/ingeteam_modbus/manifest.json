@@ -4,6 +4,8 @@
   "documentation": "https://github.com/vortizhe/home-assistant-ingeteam-modbus",
   "codeowners": ["@vortizhe"],
   "config_flow": true,
-  "version": "0.1.4"
+  "dependencies": ["integration"],
+  "iot_class": "local_polling",
+  "requirements": ["pymodbus>=3.10.0"],
+  "version": "0.1.5"
 }
-
