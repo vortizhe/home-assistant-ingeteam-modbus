@@ -5,10 +5,10 @@
       "user": {
         "title": "Define your Ingeteam modbus connection",
         "data": {
-          "host": "The ip-address of your Ingeteam inverter",
+          "host": "The ip-address of your Ingeteam device",
           "name": "The prefix to be used for your Ingeteam sensors",
-          "port": "The TCP port on which to connect to the Ingeteam inverter",
-		      "modbus_address": "The modbus address",
+          "port": "The TCP port on which to connect to the Ingeteam",
+          "modbus_address": "The modbus address",
           "read_meter": "Read meter data (only when installed)",
           "read_battery": "Read battery data (only when installed)",
           "scan_interval": "Modbus polling frequency in seconds"
@@ -16,10 +16,25 @@
       }
     },
     "error": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "invalid_host": "Invalid hostname or IP address",
+      "name_exists": "Another Ingeteam device already uses this name"
     },
     "abort": {
       "already_configured": "Device is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ingeteam Modbus options",
+        "data": {
+          "modbus_address": "The modbus address",
+          "read_meter": "Read meter data (only when installed)",
+          "read_battery": "Read battery data (only when installed)",
+          "scan_interval": "Modbus polling frequency in seconds"
+        }
+      }
     }
   }
 }
