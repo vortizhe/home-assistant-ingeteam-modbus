@@ -25,14 +25,16 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.components.integration.sensor import (
     IntegrationSensor, 
-    ATTR_SOURCE_ID, 
     UNIT_PREFIXES, 
     UNIT_TIME, 
     _IntegrationMethod,
     _IntegrationTrigger
 )
 
-from homeassistant.components.integration.const import METHOD_TRAPEZOIDAL
+from homeassistant.components.integration.const import (
+    IntegrationEntityStateAttribute,
+    METHOD_TRAPEZOIDAL,
+)
 
 from homeassistant.core import callback, CALLBACK_TYPE
 
@@ -234,7 +236,7 @@ class CalculatedEnergySensor(IntegrationSensor):
         self._unit_time = UNIT_TIME[unit_time]
         self._unit_time_str = unit_time
         self._attr_icon = "mdi:chart-histogram"
-        self._attr_extra_state_attributes = {ATTR_SOURCE_ID: source_entity}
+        self._attr_extra_state_attributes = {IntegrationEntityStateAttribute.SOURCE: source_entity}
         self._source_entity = source_entity
         self._hub = hub
 
